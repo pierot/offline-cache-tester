@@ -1,0 +1,17 @@
+CACHE MANIFEST
+# 27
+
+CACHE:
+
+index.html
+logo.png
+zepto.min.js
+localforage.min.js
+
+NETWORK:
+
+*
+
+FALLBACK:
+
+

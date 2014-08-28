@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" manifest="offline.manifest">
+<head>
+  <meta charset="UTF-8">
+  <title>Offline</title>
+
+  <style>
+    body, html {
+      font-family: Arial;
+      font-size: 21px;
+      line-height: 1.3em;
+    }
+
+    body {
+      padding: 40px;
+    }
+
+    body.online {
+      background-color: #f1fff1;
+    }
+
+    body.offline {
+      background-color: #fff1f1;
+    }
+
+    h1 {
+      text-transform: uppercase;
+      font-size: 55px;
+      color: #444;
+      margin-top: 0;
+    }
+
+    h1 img {
+      vertical-align: baseline;
+    }
+
+    .reload {
+      font-size: 12px;
+      position: absolute;
+      display: block;
+      display: inline-block;
+      top: 40px;
+      right: 40px;
+    }
+
+    .logs {
+      font-family: Courier;
+      font-size: 12px;
+      line-height: 1.1em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Offline - <img src="logo.png" alt=""></h1>
+
+  <a href="#" class='reload'>reload</a>
+
+  app is now <span class="state"></span>
+
+  <br><br>
+
+  <a href="#" class='add'>add contact</a>
+
+  <br><br>
+
+  <div class="logs">
+
+  </div>
+
+  <script src='zepto.min.js'></script>
+  <script src='localforage.min.js'></script>
+  <script>
+    (function($) {
+
+      console.log('start');
+
+      check_connection_state();
+      init_listeners();
+
+      function log(txt) {
+        console.log(txt);
+
+        $('.logs').append(txt + '<br>');
+      }
+
+      function Contact(name, email) {
+        this.name = name;
+        this.email = email;
+      }
+
+      Contact.prototype.toString = function() {
+        return 'Contact: ' + this.name + ', ' + this.email;
+      };
+
+      localforage.getItem('contacts', function(contacts) {
+        log('Current offline contacts: ' + (contacts ? contacts.length : 0));
+      });
+
+      $('.add').on('click', function(e) {
+        e.preventDefault();
+
+        if(navigator.onLine) {
+          log('Sending contact');
+
+          return false;
+        }
+
+        localforage.getItem('contacts', function(contacts) {
+          var c = new Contact('Pieter Michels', 'pieter.michels@bbdo.be');
+
+          log(JSON.stringify(contacts));
+
+          if(!contacts) {
+            contacts = [];
+          }
+
+          contacts.push(c);
+
+          localforage.setItem('contacts', contacts, function(set_value) {
+            log('Added ' + c.toString());
+          });
+        });
+
+        return false;
+      });
+
+      $('.reload').on('click', function(e) {
+        e.preventDefault();
+
+        window.location.reload();
+
+        return false;
+      });
+
+      function init_listeners() {
+        window.addEventListener('load', function(e) {
+          check_new_version();
+        }, false);
+
+        window.addEventListener("offline", function(e) {
+          check_connection_state();
+        }, false);
+
+        window.addEventListener("online", function(e) {
+          check_connection_state();
+        }, false);
+      }
+
+      function check_connection_state() {
+        var state = '';
+
+        $('body').removeClass('online');
+        $('body').removeClass('offline');
+
+        if(navigator.onLine) {
+          state = 'online';
+
+          check_new_version();
+
+          localforage.getItem('contacts', function(contacts) {
+            if(contacts && contacts.length > 0) {
+              log('We have offline contacts');
+
+              for(var i = 0; i < contacts.length; i++) {
+                var contact = contacts[i];
+
+                log('Sending ' + contact.name);
+              }
+
+              localforage.removeItem('contacts', function() {
+                // removed
+              });
+            }
+          });
+        } else {
+          state = 'offline';
+        }
+
+        $('.state').html(state);
+        $('body').addClass(state);
+      }
+
+      function check_new_version() {
+        if(window.applicationCache) {
+          window.applicationCache.addEventListener('updateready', function(e) {
+            if (window.applicationCache.status == window.applicationCache.UPDATEREADY) {
+              window.applicationCache.swapCache();
+
+              if(confirm('A new version of is available. Load it?')) {
+                window.location.reload();
+              }
+            }
+          }, false);
+        }
+      }
+
+    })($);
+  </script>
+</body>
+</html>
